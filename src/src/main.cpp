@@ -41,19 +41,6 @@ int main(int argc, char* argv[]) {
     int ballY = initialBallY;
     float ballSpeedX = 0, ballSpeedY = 0;
 
-    // Power bar variables
-    const int MAX_POWER = 100;
-    float currentPower = 0;
-    float powerIncrement = 3.0f;  // Faster power increment
-    bool isPoweringUp = false;
-    float aimAngle = 0;
-    const int POWER_BAR_LENGTH = 250;  // Make power bar taller
-    const int POWER_BAR_WIDTH = 20;    // Make power bar wider
-    const int POWER_BAR_MARGIN = 20;   // Margin from screen edge
-    const int ARROW_OFFSET = 20;      // Distance from ball's edge to arrow
-    const int POINT_WIDTH = 15;        // Reduced width for thinner appearance
-    const int POINT_HEIGHT = 50;       // Adjusted height for better appearance
-
     // Định nghĩa hố màu đỏ
     srand(static_cast<unsigned>(time(0)));
     int holeRadius = 20; // Bán kính hố
@@ -67,12 +54,11 @@ int main(int argc, char* argv[]) {
     SDL_Event e;
 
     // Load ảnh
-    SDL_Surface* ballSurface = IMG_Load("assets/graphics/ball.png");
-    SDL_Surface* bgSurface = IMG_Load("assets/graphics/bg.png");
-    SDL_Surface* holeSurface = IMG_Load("assets/graphics/hole.png");
-    SDL_Surface* pointSurface = IMG_Load("assets/graphics/point.png");
+    SDL_Surface* ballSurface = IMG_Load("assets/ball.png");
+    SDL_Surface* bgSurface = IMG_Load("assets/bg.png");
+    SDL_Surface* holeSurface = IMG_Load("assets/hole.png");
 
-    if (!ballSurface || !bgSurface || !holeSurface || !pointSurface) {
+    if (!ballSurface || !bgSurface || !holeSurface) {
         cout << "Không thể load ảnh! SDL_image Error: " << IMG_GetError() << endl;
         return -1;
     }
@@ -81,13 +67,11 @@ int main(int argc, char* argv[]) {
     SDL_Texture* ballTexture = SDL_CreateTextureFromSurface(renderer, ballSurface);
     SDL_Texture* bgTexture = SDL_CreateTextureFromSurface(renderer, bgSurface);
     SDL_Texture* holeTexture = SDL_CreateTextureFromSurface(renderer, holeSurface);
-    SDL_Texture* pointTexture = SDL_CreateTextureFromSurface(renderer, pointSurface);
 
-    // Giải phóng surfaces
+    // Giải phóng surfaces vì đã có textures
     SDL_FreeSurface(ballSurface);
     SDL_FreeSurface(bgSurface);
     SDL_FreeSurface(holeSurface);
-    SDL_FreeSurface(pointSurface);
 
     // Kích thước của ball và hole
     SDL_Rect ballRect = { SCREEN_WIDTH/2, SCREEN_HEIGHT/2, 30, 30 }; // Điều chỉnh kích thước phù hợp
@@ -105,40 +89,26 @@ int main(int argc, char* argv[]) {
                 int dy = e.button.y - ballY;
                 if (sqrt(dx * dx + dy * dy) <= ballRadius) {
                     isDragging = true;
-                    isPoweringUp = true;
-                    currentPower = 0;
+                    startX = e.button.x;
+                    startY = e.button.y;
                 }
             }
 
             if (e.type == SDL_MOUSEMOTION && isDragging) {
-                // Calculate aim angle based on mouse position
-                int dx = e.motion.x - ballX;
-                int dy = e.motion.y - ballY;
-                aimAngle = atan2(dy, dx);
+                // Di chuyển quả bóng khi kéo
+                ballX = e.motion.x;
+                ballY = e.motion.y;
             }
 
             if (e.type == SDL_MOUSEBUTTONUP && e.button.button == SDL_BUTTON_LEFT) {
-                if (isDragging) {
-                    isDragging = false;
-                    isPoweringUp = false;
-                    
-                    // Increased power multiplier
-                    float power = currentPower * 0.25f;
-                    ballSpeedX = cos(aimAngle) * power;
-                    ballSpeedY = sin(aimAngle) * power;
-                }
-            }
-        }
+                // Thả chuột, bắt đầu bay theo hướng kéo
+                isDragging = false;
 
-        // Update power while charging
-        if (isPoweringUp) {
-            currentPower += powerIncrement;
-            if (currentPower >= MAX_POWER) {
-                currentPower = MAX_POWER;
-                powerIncrement = -powerIncrement;
-            } else if (currentPower <= 0) {
-                currentPower = 0;
-                powerIncrement = -powerIncrement;
+                // Tính vận tốc dựa trên khoảng cách kéo
+                int endX = e.button.x;
+                int endY = e.button.y;
+                ballSpeedX = (endX - startX) / 8.0f; // Chia nhỏ để giảm tốc độ
+                ballSpeedY = (endY - startY) / 8.0f;
             }
         }
 
@@ -194,52 +164,6 @@ int main(int argc, char* argv[]) {
         // Render ball
         SDL_RenderCopy(renderer, ballTexture, NULL, &ballRect);
 
-        // Render power bar when charging
-        if (isDragging) {
-            // Calculate point position to be just outside the ball
-            int pointX = ballX + cos(aimAngle) * (ballRadius + ARROW_OFFSET);
-            int pointY = ballY + sin(aimAngle) * (ballRadius + ARROW_OFFSET);
-
-            SDL_Rect pointRect = {
-                pointX - POINT_WIDTH/2,
-                pointY - POINT_HEIGHT/2,
-                POINT_WIDTH,
-                POINT_HEIGHT
-            };
-            
-            double angle = aimAngle * 180.0 / M_PI;
-            SDL_RenderCopyEx(renderer, pointTexture, NULL, &pointRect, angle + 90, NULL, SDL_FLIP_NONE);
-
-            // Draw power bar background (fixed position at bottom-right)
-            SDL_Rect powerBarBg = {
-                SCREEN_WIDTH - POWER_BAR_MARGIN - POWER_BAR_WIDTH,
-                SCREEN_HEIGHT - POWER_BAR_MARGIN - POWER_BAR_LENGTH,
-                POWER_BAR_WIDTH,
-                POWER_BAR_LENGTH
-            };
-            SDL_SetRenderDrawColor(renderer, 50, 50, 50, 255);
-            SDL_RenderFillRect(renderer, &powerBarBg);
-
-            // Draw power bar fill
-            int fillHeight = static_cast<int>((currentPower / MAX_POWER) * POWER_BAR_LENGTH);
-            SDL_Rect powerBarFill = {
-                powerBarBg.x,
-                powerBarBg.y + (POWER_BAR_LENGTH - fillHeight),
-                POWER_BAR_WIDTH,
-                fillHeight
-            };
-
-            // Color gradient from green to yellow to red based on power
-            int r = currentPower > 50 ? 255 : (currentPower * 5.1f);
-            int g = currentPower < 50 ? 255 : (255 - (currentPower - 50) * 5.1f);
-            SDL_SetRenderDrawColor(renderer, r, g, 0, 255);
-            SDL_RenderFillRect(renderer, &powerBarFill);
-
-            // Draw power bar border
-            SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
-            SDL_RenderDrawRect(renderer, &powerBarBg);
-        }
-
         SDL_RenderPresent(renderer);
         SDL_Delay(10);
     }
@@ -248,7 +172,6 @@ int main(int argc, char* argv[]) {
     SDL_DestroyTexture(ballTexture);
     SDL_DestroyTexture(bgTexture);
     SDL_DestroyTexture(holeTexture);
-    SDL_DestroyTexture(pointTexture);
 
     // Giải phóng tài nguyên
     SDL_DestroyRenderer(renderer);
