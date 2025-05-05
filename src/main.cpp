@@ -366,24 +366,17 @@ int main(int argc, char* argv[]) {
     SDL_Surface* bgSurface = IMG_Load("assets/graphics/bg.png");
     SDL_Surface* holeSurface = IMG_Load("assets/graphics/hole.png");
     SDL_Surface* pointSurface = IMG_Load("assets/graphics/point.png");
-    SDL_Surface* kawaiiBgSurface = IMG_Load("C:/Users/Cong/golf/assets/graphics/kawaii.png"); // Thêm load kawaii background
-    SDL_Surface* startBtnSurface = IMG_Load("C:/Users/Cong/golf/assets/graphics/start.png");
-    SDL_Surface* exitBtnSurface = IMG_Load("C:/Users/Cong/golf/assets/graphics/exit (1).png");
+    SDL_Surface* menuBgSurface = IMG_Load("C:/Users/Cong/golf/assets/graphics/bg1.png"); // Change kawaii to bg1
     SDL_Surface* darkTileSurface = IMG_Load("C:/Users/Cong/golf/assets/graphics/tile32_dark.png");
     SDL_Surface* lightTileSurface = IMG_Load("C:/Users/Cong/golf/assets/graphics/tile32_light.png");
     SDL_Surface* powermeter = IMG_Load("C:/Users/Cong/golf/assets/graphics/powermeter.png");
-    if (!kawaiiBgSurface) {
+    if (!menuBgSurface) {
         cout << "Không thể load ảnh kawaii! SDL_image Error: " << IMG_GetError() << endl;
         return -1;
     }
 
     if (!darkTileSurface || !lightTileSurface) {
         cout << "Không thể load ảnh tile! SDL_image Error: " << IMG_GetError() << endl;
-        return -1;
-    }
-
-    if (!startBtnSurface || !exitBtnSurface) {
-        cout << "Không thể load ảnh button! SDL_image Error: " << IMG_GetError() << endl;
         return -1;
     }
 
@@ -418,9 +411,7 @@ int main(int argc, char* argv[]) {
     SDL_Texture* bgTexture = SDL_CreateTextureFromSurface(renderer, bgSurface);
     SDL_Texture* holeTexture = SDL_CreateTextureFromSurface(renderer, holeSurface);
     SDL_Texture* pointTexture = SDL_CreateTextureFromSurface(renderer, pointSurface);
-    SDL_Texture* kawaiiBgTexture = SDL_CreateTextureFromSurface(renderer, kawaiiBgSurface); // Thêm texture kawaii
-    SDL_Texture* startBtnTexture = SDL_CreateTextureFromSurface(renderer, startBtnSurface);
-    SDL_Texture* exitBtnTexture = SDL_CreateTextureFromSurface(renderer, exitBtnSurface);
+    SDL_Texture* menuBgTexture = SDL_CreateTextureFromSurface(renderer, menuBgSurface); // Change name to match
     SDL_Texture* darkTileTexture = SDL_CreateTextureFromSurface(renderer, darkTileSurface);
     SDL_Texture* lightTileTexture = SDL_CreateTextureFromSurface(renderer, lightTileSurface);
     SDL_Texture* powermeterTexture = SDL_CreateTextureFromSurface(renderer, powermeter);
@@ -428,6 +419,18 @@ int main(int argc, char* argv[]) {
         cout << "Không thể tạo texture! SDL_Error: " << SDL_GetError() << endl;
         return -1;
     }
+
+    // Add after other surface loading
+    SDL_Surface* playBrightSurface = IMG_Load("C:/Users/Cong/golf/assets/graphics/playyy_bright.png");
+    if (!playBrightSurface) {
+        cout << "Không thể load ảnh play bright! SDL_image Error: " << IMG_GetError() << endl;
+        return -1;
+    }
+
+    // Add after other texture creation
+    SDL_Texture* playBrightTexture = SDL_CreateTextureFromSurface(renderer, playBrightSurface);
+    SDL_FreeSurface(playBrightSurface);
+
     // Load âm thanh
     Mix_Chunk* swingSound = Mix_LoadWAV("C:/Users/Cong/golf/assets/audio/swing.mp3");
     Mix_Chunk* holeSound = Mix_LoadWAV("C:/Users/Cong/golf/assets/audio/hole.mp3");
@@ -438,14 +441,31 @@ int main(int argc, char* argv[]) {
         return -1;
     }
 
+    // Add after other surface loading
+    SDL_Surface* menuBrightSurface = IMG_Load("C:/Users/Cong/golf/assets/graphics/menu_bright.png");
+    SDL_Surface* exitBrightSurface = IMG_Load("C:/Users/Cong/golf/assets/graphics/exit_bright.png");
+    if (!menuBrightSurface || !exitBrightSurface) {
+        cout << "Không thể load ảnh bright! SDL_image Error: " << IMG_GetError() << endl;
+        return -1;
+    }
+
+    // Add texture creation
+    SDL_Texture* menuBrightTexture = SDL_CreateTextureFromSurface(renderer, menuBrightSurface);
+    SDL_Texture* exitBrightTexture = SDL_CreateTextureFromSurface(renderer, exitBrightSurface);
+    SDL_FreeSurface(menuBrightSurface);
+    SDL_FreeSurface(exitBrightSurface);
+
+    // Add hit box rectangles
+    SDL_Rect playHitBox = {291, 235, 210, 60};  // Original play button
+    SDL_Rect menuHitBox = {291, 322, 210, 60};  // New menu button
+    SDL_Rect exitHitBox = {291, 422, 210, 60};  // New exit button
+
     // Giải phóng surfaces
     SDL_FreeSurface(ballSurface);
     SDL_FreeSurface(bgSurface);
     SDL_FreeSurface(holeSurface);
     SDL_FreeSurface(pointSurface);
-    SDL_FreeSurface(kawaiiBgSurface); // Giải phóng kawaii surface
-    SDL_FreeSurface(startBtnSurface);
-    SDL_FreeSurface(exitBtnSurface);
+    SDL_FreeSurface(menuBgSurface); // Change name to match
     SDL_FreeSurface(darkTileSurface);
     SDL_FreeSurface(lightTileSurface);
 
@@ -487,18 +507,12 @@ int main(int argc, char* argv[]) {
     };
     GameState gameState = MENU;
 
-    // Menu buttons - Chỉnh sửa kích thước và vị trí
-    SDL_Rect playButton = {
-        SCREEN_WIDTH/2 - 125,  // Căn giữa ngang, thêm margin
-        SCREEN_HEIGHT/2 - 100, // Đưa lên cao hơn
-        250,                   // Tăng chiều rộng
-        80                     // Tăng chiều cao
-    };
-    SDL_Rect exitButton = {
-        SCREEN_WIDTH/2 - 125,  // Căn giữa ngang, giữ nguyên alignment với nút play
-        SCREEN_HEIGHT/2 + 20,  // Giảm khoảng cách với nút play
-        250,                   // Giữ kích thước giống nút play
-        80                     // Giữ kích thước giống nút play
+    // Update menu button rectangle with exact coordinates
+    SDL_Rect hoverButton = {
+        291,    // x coordinate
+        235,    // y coordinate
+        210,    // width
+        60      // height
     };
 
     while (!quit) {
@@ -514,15 +528,9 @@ int main(int argc, char* argv[]) {
                     int mouseY = e.button.y;
                     
                     // Check play button
-                    if (mouseX >= playButton.x && mouseX <= playButton.x + playButton.w &&
-                        mouseY >= playButton.y && mouseY <= playButton.y + playButton.h) {
+                    if (mouseX >= hoverButton.x && mouseX <= hoverButton.x + hoverButton.w &&
+                        mouseY >= hoverButton.y && mouseY <= hoverButton.y + hoverButton.h) {
                         gameState = PLAYING;
-                    }
-                    
-                    // Check exit button
-                    if (mouseX >= exitButton.x && mouseX <= exitButton.x + exitButton.w &&
-                        mouseY >= exitButton.y && mouseY <= exitButton.y + exitButton.h) {
-                        quit = true;
                     }
                 }
                 continue;  // Skip game logic in menu
@@ -575,15 +583,41 @@ int main(int argc, char* argv[]) {
 
         // Render based on game state
         if (gameState == MENU) {
-            // Render menu với kawaii background
-            SDL_RenderCopy(renderer, kawaiiBgTexture, NULL, NULL); // Render kawaii background
+            // Get mouse position
+            int mouseX, mouseY;
+            SDL_GetMouseState(&mouseX, &mouseY);
 
-            // Render button images instead of rectangles
-            SDL_RenderCopy(renderer, startBtnTexture, NULL, &playButton);
-            SDL_RenderCopy(renderer, exitBtnTexture, NULL, &exitButton);
+            // Default background
+            SDL_RenderCopy(renderer, menuBgTexture, NULL, NULL);
+
+            // Check all hit boxes and render appropriate background
+            if (mouseX >= playHitBox.x && mouseX <= playHitBox.x + playHitBox.w &&
+                mouseY >= playHitBox.y && mouseY <= playHitBox.y + playHitBox.h) {
+                SDL_RenderCopy(renderer, playBrightTexture, NULL, NULL);
+            }
+            else if (mouseX >= menuHitBox.x && mouseX <= menuHitBox.x + menuHitBox.w &&
+                     mouseY >= menuHitBox.y && mouseY <= menuHitBox.y + menuHitBox.h) {
+                SDL_RenderCopy(renderer, menuBrightTexture, NULL, NULL);
+            }
+            else if (mouseX >= exitHitBox.x && mouseX <= exitHitBox.x + exitHitBox.w &&
+                     mouseY >= exitHitBox.y && mouseY <= exitHitBox.y + exitHitBox.h) {
+                SDL_RenderCopy(renderer, exitBrightTexture, NULL, NULL);
+            }
+
+            // Handle clicks
+            if (e.type == SDL_MOUSEBUTTONDOWN) {
+                if (mouseX >= playHitBox.x && mouseX <= playHitBox.x + playHitBox.w &&
+                    mouseY >= playHitBox.y && mouseY <= playHitBox.y + playHitBox.h) {
+                    gameState = PLAYING;
+                }
+                else if (mouseX >= exitHitBox.x && mouseX <= exitHitBox.x + exitHitBox.w &&
+                        mouseY >= exitHitBox.y && mouseY <= exitHitBox.y + exitHitBox.h) {
+                    quit = true;
+                }
+            }
 
             SDL_RenderPresent(renderer);
-            continue;  // Skip game rendering in menu
+            continue;
         }
 
         // Update power while charging
@@ -1125,12 +1159,13 @@ int main(int argc, char* argv[]) {
     SDL_DestroyTexture(bgTexture);
     SDL_DestroyTexture(holeTexture);
     SDL_DestroyTexture(pointTexture);
-    SDL_DestroyTexture(kawaiiBgTexture); // Giải phóng kawaii texture
-    SDL_DestroyTexture(startBtnTexture);
-    SDL_DestroyTexture(exitBtnTexture);
+    SDL_DestroyTexture(menuBgTexture); // Change name to match
     SDL_DestroyTexture(rewardTexture);
     SDL_DestroyTexture(darkTileTexture);
     SDL_DestroyTexture(lightTileTexture);
+    SDL_DestroyTexture(playBrightTexture);
+    SDL_DestroyTexture(menuBrightTexture);
+    SDL_DestroyTexture(exitBrightTexture);
 
     // Giải phóng âm thanh trước khi thoát
     Mix_FreeChunk(swingSound);
