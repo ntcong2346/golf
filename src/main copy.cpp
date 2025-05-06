@@ -1,7 +1,7 @@
-#include "C:\Users\Cong\golf\src\include\SDL2\SDL.h"
-#include "C:\Users\Cong\golf\src\include\SDL2\SDL_image.h"
-#include "C:\Users\Cong\golf\src\include\SDL2\SDL_ttf.h"
-#include "C:\Users\Cong\golf\src\include\SDL2\SDL_mixer.h" // Thêm SDL_mixer
+#include <SDL2/SDL.h>
+#include <SDL2/SDL_image.h>
+#include <SDL2/SDL_ttf.h>
+#include <SDL2/SDL_mixer.h>
 #include <iostream>
 #include <cstdlib>
 #include <ctime>
@@ -53,14 +53,14 @@ struct Obstacle {
     SDL_Rect rect;
 };
 
-// Add new variables for game state
+// Modify the GameScore struct
 struct GameScore {
     int player1Score = 0;
     int player2Score = 0;
-    int currentRound = 1;
-    int maxRounds = 5;  // Changed to 5 rounds
-    int totalStrokes1 = 0;  // Thêm biến đếm tổng số strokes của player 1
-    int totalStrokes2 = 0;  // Thêm biến đếm tổng số strokes của player 2
+    int currentRound = 1;  // Thay đổi từ 0 thành 1
+    int maxRounds = 4;     // Giữ nguyên là 4
+    int totalStrokes1 = 0;
+    int totalStrokes2 = 0;
     bool isGameOver = false;
 };
 
@@ -90,6 +90,77 @@ ObstacleSet rightObstacles = {{{0}}, 1};  // Start with 1 obstacle
 
 GameScore gameScore;
 
+// Add after GameState enum
+enum BallSpeed {
+    SLOW = 0,
+    NORMAL = 1,
+    SWIFT = 2
+};
+
+// Add new variables for game settings
+struct GameSettings {
+    BallSpeed speed = NORMAL;
+    bool soundEnabled = true;
+    float speedMultiplier[3] = {0.08f, 0.12f, 0.18f}; // For SLOW, NORMAL, SWIFT
+};
+
+GameSettings settings;
+
+// Add this function before the main game loop
+void renderSettingsMenu(SDL_Renderer* renderer, TTF_Font* font, GameSettings& settings) {
+    SDL_Color textColor = {255, 255, 255, 255};
+    SDL_Color selectedColor = {255, 255, 0, 255};
+    
+    // Speed settings
+    const char* speedTexts[] = {"Speed: Slow", "Speed: Normal", "Speed: Swift"};
+    SDL_Surface* speedSurface = TTF_RenderText_Solid(font, speedTexts[settings.speed], 
+        settings.speed == SLOW ? selectedColor : textColor);
+    SDL_Texture* speedTexture = SDL_CreateTextureFromSurface(renderer, speedSurface);
+    SDL_Rect speedRect = {
+        SCREEN_WIDTH/2 - speedSurface->w/2,
+        250,
+        speedSurface->w,
+        speedSurface->h
+    };
+    
+    // Sound settings
+    const char* soundText = settings.soundEnabled ? "Sound: On" : "Sound: Off";
+    SDL_Surface* soundSurface = TTF_RenderText_Solid(font, soundText, textColor);
+    SDL_Texture* soundTexture = SDL_CreateTextureFromSurface(renderer, soundSurface);
+    SDL_Rect soundRect = {
+        SCREEN_WIDTH/2 - soundSurface->w/2,
+        300,
+        soundSurface->w,
+        soundSurface->h
+    };
+    
+    // Back button
+    SDL_Surface* backSurface = TTF_RenderText_Solid(font, "Back", textColor);
+    SDL_Texture* backTexture = SDL_CreateTextureFromSurface(renderer, backSurface);
+    SDL_Rect backRect = {
+        SCREEN_WIDTH/2 - backSurface->w/2,
+        350,
+        backSurface->w,
+        backSurface->h
+    };
+    
+    // Render settings menu
+    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+    SDL_RenderClear(renderer);
+    SDL_RenderCopy(renderer, speedTexture, NULL, &speedRect);
+    SDL_RenderCopy(renderer, soundTexture, NULL, &soundRect);
+    SDL_RenderCopy(renderer, backTexture, NULL, &backRect);
+    SDL_RenderPresent(renderer);
+    
+    // Clean up
+    SDL_FreeSurface(speedSurface);
+    SDL_FreeSurface(soundSurface);
+    SDL_FreeSurface(backSurface);
+    SDL_DestroyTexture(speedTexture);
+    SDL_DestroyTexture(soundTexture);
+    SDL_DestroyTexture(backTexture);
+}
+
 int main(int argc, char* argv[]) {
     if (SDL_Init(SDL_INIT_VIDEO) < 0) {
         cout << "SDL không thể khởi tạo! SDL_Error: " << SDL_GetError() << endl;
@@ -114,8 +185,9 @@ int main(int argc, char* argv[]) {
         return -1;
     }
 
+    // Thay đổi đường dẫn font và kích thước
     // Load font
-    TTF_Font* font = TTF_OpenFont("C:/Users/Cong/golf/assets/font/font.ttf", 24);
+    TTF_Font* font = TTF_OpenFont("C:/Users/Cong/golf/assets/font/Arial-bold.ttf", 24);  // Giảm từ 28 xuống 24
     if (!font) {
         cout << "Failed to load font! SDL_ttf Error: " << TTF_GetError() << endl;
         return -1;
@@ -133,7 +205,7 @@ int main(int argc, char* argv[]) {
         return -1;
     }
 
-    int ballRadius = 15; // Bán kính quả bóng nhỏ hơn
+    int ballRadius = 10; // Giảm từ 15 xuống 10
     const int initialBallX = SCREEN_WIDTH / 2;
     const int initialBallY = SCREEN_HEIGHT / 2;
 
@@ -143,7 +215,7 @@ int main(int argc, char* argv[]) {
         SCREEN_HEIGHT - 50,            // Cách đáy 50px
         0, 0,                          // Initial speed
         true,                          // First ball is active
-        {SCREEN_WIDTH / 4 - 15, SCREEN_HEIGHT - 65, 30, 30}  // Rect position matches ball position
+        {SCREEN_WIDTH / 4 - 10, SCREEN_HEIGHT - 60, 20, 20}  // Giảm từ 30x30 xuống 20x20
     };
 
     Ball ball2 = {
@@ -151,7 +223,7 @@ int main(int argc, char* argv[]) {
         SCREEN_HEIGHT - 50,            // Cách đáy 50px
         0, 0,                          // Initial speed
         false,                         // Second ball starts inactive
-        {3 * SCREEN_WIDTH / 4 - 15, SCREEN_HEIGHT - 65, 30, 30}  // Rect position matches ball position
+        {3 * SCREEN_WIDTH / 4 - 10, SCREEN_HEIGHT - 60, 20, 20}  // Giảm từ 30x30 xuống 20x20
     };
 
     int currentBall = 1; // 1 for ball1, 2 for ball2
@@ -172,22 +244,21 @@ int main(int argc, char* argv[]) {
 
     // Định nghĩa hố màu đỏ
     srand(static_cast<unsigned>(time(0)));
-    int holeRadius = 20; // Bán kính hố
+    const int HOLE_RADIUS = 15; // Giảm từ 20 xuống 15
 
     // Thay thế khai báo hole bằng 2 lỗ
-    const int HOLE_RADIUS = 20;
     Hole hole1 = {
         50,  // Fixed x position near left corner
         50,  // Fixed y position near top
         HOLE_RADIUS,
-        {0, 0, 40, 40}
+        {0, 0, 30, 30}  // Giảm từ 40x40 xuống 30x30
     };
 
     Hole hole2 = {
         SCREEN_WIDTH/2 + 50,  // Fixed x position near left of right half
         50,  // Fixed y position near top
         HOLE_RADIUS,
-        {0, 0, 40, 40}
+        {0, 0, 30, 30}  // Giảm từ 40x40 xuống 30x30
     };
 
     // Replace single obstacle initialization with arrays
@@ -503,7 +574,8 @@ int main(int argc, char* argv[]) {
     // Add after SDL initialization and before game loop
     enum GameState {
         MENU,
-        PLAYING
+        PLAYING,
+        GAME_OVER  // Add this new state
     };
     GameState gameState = MENU;
 
@@ -515,6 +587,11 @@ int main(int argc, char* argv[]) {
         60      // height
     };
 
+    // Add new texture variables after other texture declarations
+    SDL_Surface* gameOverSurface = IMG_Load("C:/Users/Cong/golf/assets/graphics/gameoverbg.png");
+    SDL_Texture* gameOverTexture = SDL_CreateTextureFromSurface(renderer, gameOverSurface);
+    SDL_FreeSurface(gameOverSurface);
+
     while (!quit) {
         while (SDL_PollEvent(&e) != 0) {
             if (e.type == SDL_QUIT) {
@@ -523,17 +600,44 @@ int main(int argc, char* argv[]) {
 
             // Handle menu events
             if (gameState == MENU) {
+                // Get mouse position
+                int mouseX, mouseY;
+                SDL_GetMouseState(&mouseX, &mouseY);
+
+                // Default background
+                SDL_RenderCopy(renderer, menuBgTexture, NULL, NULL);
+
+                // Check hover states and render appropriate backgrounds
+                if (mouseX >= playHitBox.x && mouseX <= playHitBox.x + playHitBox.w &&
+                    mouseY >= playHitBox.y && mouseY <= playHitBox.y + playHitBox.h) {
+                    SDL_RenderCopy(renderer, playBrightTexture, NULL, NULL);
+                }
+                else if (mouseX >= menuHitBox.x && mouseX <= menuHitBox.x + menuHitBox.w &&
+                         mouseY >= menuHitBox.y && mouseY <= menuHitBox.y + menuHitBox.h) {
+                    SDL_RenderCopy(renderer, menuBrightTexture, NULL, NULL);
+                }
+                else if (mouseX >= exitHitBox.x && mouseX <= exitHitBox.x + exitHitBox.w &&
+                         mouseY >= exitHitBox.y && mouseY <= exitHitBox.y + exitHitBox.h) {
+                    SDL_RenderCopy(renderer, exitBrightTexture, NULL, NULL);
+                }
+
+                // Handle clicks
                 if (e.type == SDL_MOUSEBUTTONDOWN) {
-                    int mouseX = e.button.x;
-                    int mouseY = e.button.y;
-                    
-                    // Check play button
-                    if (mouseX >= hoverButton.x && mouseX <= hoverButton.x + hoverButton.w &&
-                        mouseY >= hoverButton.y && mouseY <= hoverButton.y + hoverButton.h) {
+                    if (mouseX >= exitHitBox.x && mouseX <= exitHitBox.x + exitHitBox.w &&
+                        mouseY >= exitHitBox.y && mouseY <= exitHitBox.y + exitHitBox.h) {
+                        // Thoát trò chơi ngay lập tức
+                        quit = true;
+                        break;  // Thoát khỏi game loop
+                    }
+                    else if (mouseX >= playHitBox.x && mouseX <= playHitBox.x + playHitBox.w &&
+                        mouseY >= playHitBox.y && mouseY <= playHitBox.y + playHitBox.h) {
                         gameState = PLAYING;
                     }
+                    // ... rest of the menu handling code ...
                 }
-                continue;  // Skip game logic in menu
+
+                SDL_RenderPresent(renderer);
+                continue;
             }
 
             // Existing game event handling
@@ -564,7 +668,7 @@ int main(int argc, char* argv[]) {
                     isDragging = false;
                     isPoweringUp = false;
                     
-                    float power = currentPower * POWER_MULTIPLIER;
+                    float power = currentPower * settings.speedMultiplier[settings.speed];
                     // More precise velocity calculations
                     activeBall.speedX = roundf(cos(aimAngle) * power * 100) / 100.0f;
                     activeBall.speedY = roundf(sin(aimAngle) * power * 100) / 100.0f;
@@ -610,8 +714,44 @@ int main(int argc, char* argv[]) {
                     mouseY >= playHitBox.y && mouseY <= playHitBox.y + playHitBox.h) {
                     gameState = PLAYING;
                 }
+                else if (mouseX >= menuHitBox.x && mouseX <= menuHitBox.x + menuHitBox.w &&
+                         mouseY >= menuHitBox.y && mouseY <= menuHitBox.y + menuHitBox.h) {
+                    // Show settings menu
+                    bool inSettings = true;
+                    while (inSettings && !quit) {
+                        while (SDL_PollEvent(&e) != 0) {
+                            if (e.type == SDL_QUIT) {
+                                quit = true;
+                                inSettings = false;
+                            }
+                            if (e.type == SDL_MOUSEBUTTONDOWN) {
+                                int settingsMouseX = e.button.x;
+                                int settingsMouseY = e.button.y;
+                                
+                                // Check speed button click
+                                if (settingsMouseY >= 250 && settingsMouseY <= 280) {
+                                    settings.speed = (BallSpeed)((settings.speed + 1) % 3);
+                                }
+                                // Check sound button click
+                                else if (settingsMouseY >= 300 && settingsMouseY <= 330) {
+                                    settings.soundEnabled = !settings.soundEnabled;
+                                    if (!settings.soundEnabled) {
+                                        Mix_Volume(-1, 0); // Mute all channels
+                                    } else {
+                                        Mix_Volume(-1, MIX_MAX_VOLUME); // Restore volume
+                                    }
+                                }
+                                // Check back button click
+                                else if (settingsMouseY >= 350 && settingsMouseY <= 380) {
+                                    inSettings = false;
+                                }
+                            }
+                        }
+                        renderSettingsMenu(renderer, font, settings);
+                    }
+                }
                 else if (mouseX >= exitHitBox.x && mouseX <= exitHitBox.x + exitHitBox.w &&
-                        mouseY >= exitHitBox.y && mouseY <= exitHitBox.y + exitHitBox.h) {
+                         mouseY >= exitHitBox.y && mouseY <= exitHitBox.y + exitHitBox.h) {
                     quit = true;
                 }
             }
@@ -865,15 +1005,101 @@ int main(int argc, char* argv[]) {
                             gameScore.currentRound++;
                             
                             // Check if game is over
-                            if (gameScore.currentRound > gameScore.maxRounds) {
+                            if (gameScore.currentRound > gameScore.maxRounds) {  // Sửa từ >= thành >
                                 gameScore.isGameOver = true;
-                                gameState = MENU;  // Return to menu
-                                // Reset game for next time
-                                gameScore.currentRound = 1;
-                                gameScore.player1Score = 0;
-                                gameScore.player2Score = 0;
-                                gameScore.totalStrokes1 = 0;  // Reset tổng strokes
-                                gameScore.totalStrokes2 = 0;  // Reset tổng strokes
+                                gameState = GAME_OVER;  // Change to GAME_OVER instead of MENU
+                                
+                                // Determine winner
+                                std::string winnerText;
+                                if (gameScore.totalStrokes1 < gameScore.totalStrokes2) {
+                                    winnerText = "Player 1 Wins!";
+                                } else if (gameScore.totalStrokes2 < gameScore.totalStrokes1) {
+                                    winnerText = "Player 2 Wins!";
+                                } else {
+                                    winnerText = "Draw! Let's play again!";
+                                }
+                                
+                                // Create winner texture
+                                SDL_Color textColor = {255, 255, 255, 255};
+                                SDL_Surface* winnerSurface = TTF_RenderText_Solid(font, winnerText.c_str(), textColor);
+                                SDL_Texture* winnerTexture = SDL_CreateTextureFromSurface(renderer, winnerSurface);
+                                SDL_Rect winnerRect = {
+                                    SCREEN_WIDTH/2 - winnerSurface->w/2,
+                                    SCREEN_HEIGHT/2 - winnerSurface->h/2,
+                                    winnerSurface->w,
+                                    winnerSurface->h
+                                };
+                                
+                                // Display final scores
+                                char finalScoreText[128];
+                                sprintf(finalScoreText, "Final Scores - Player 1: %d strokes, Player 2: %d strokes",
+                                        gameScore.totalStrokes1, gameScore.totalStrokes2);
+                                SDL_Surface* scoreSurface = TTF_RenderText_Solid(font, finalScoreText, textColor);
+                                SDL_Texture* scoreTexture = SDL_CreateTextureFromSurface(renderer, scoreSurface);
+                                SDL_Rect scoreRect = {
+                                    SCREEN_WIDTH/2 - scoreSurface->w/2,
+                                    winnerRect.y + winnerRect.h + 20,
+                                    scoreSurface->w,
+                                    scoreSurface->h
+                                };
+                                
+                                // Add "Press SPACE to return to menu" text
+                                const char* promptText = "Press SPACE to return to menu";
+                                SDL_Surface* promptSurface = TTF_RenderText_Solid(font, promptText, textColor);
+                                SDL_Texture* promptTexture = SDL_CreateTextureFromSurface(renderer, promptSurface);
+                                SDL_Rect promptRect = {
+                                    SCREEN_WIDTH/2 - promptSurface->w/2,
+                                    scoreRect.y + scoreRect.h + 40,
+                                    promptSurface->w,
+                                    promptSurface->h
+                                };
+                                
+                                // Game over render loop
+                                bool gameOverScreen = true;
+                                while (gameOverScreen && !quit) {
+                                    while (SDL_PollEvent(&e) != 0) {
+                                        if (e.type == SDL_QUIT) {
+                                            quit = true;
+                                        }
+                                        if (e.type == SDL_KEYDOWN && e.key.keysym.sym == SDLK_SPACE) {
+                                            gameOverScreen = false;
+                                            gameState = MENU;
+                                            // Reset game state
+                                            gameScore.currentRound = 1;
+                                            gameScore.player1Score = 0;
+                                            gameScore.player2Score = 0;
+                                            gameScore.totalStrokes1 = 0;
+                                            gameScore.totalStrokes2 = 0;
+                                            gameScore.isGameOver = false;
+                                            player1Strokes = 0;
+                                            player2Strokes = 0;
+                                        }
+                                    }
+                                    
+                                    // Render game over screen
+                                    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+                                    SDL_RenderClear(renderer);
+                                    SDL_RenderCopy(renderer, gameOverTexture, NULL, NULL);
+                                    SDL_RenderCopy(renderer, winnerTexture, NULL, &winnerRect);
+                                    SDL_RenderCopy(renderer, scoreTexture, NULL, &scoreRect);
+                                    SDL_RenderCopy(renderer, promptTexture, NULL, &promptRect);
+                                    SDL_RenderPresent(renderer);
+                                }
+                                
+                                // Clean up textures
+                                SDL_DestroyTexture(winnerTexture);
+                                SDL_DestroyTexture(scoreTexture);
+                                SDL_DestroyTexture(promptTexture);
+                                SDL_FreeSurface(winnerSurface);
+                                SDL_FreeSurface(scoreSurface);
+                                SDL_FreeSurface(promptSurface);
+                                
+                                // Reset ball positions for new game
+                                ball1.x = SCREEN_WIDTH / 4;
+                                ball1.y = SCREEN_HEIGHT - 50;
+                                ball2.x = 3 * SCREEN_WIDTH / 4;
+                                ball2.y = SCREEN_HEIGHT - 50;
+                                
                             } else {
                                 // Set up next round
                                 // updateHolePosition(hole1, true);
@@ -1096,48 +1322,39 @@ int main(int argc, char* argv[]) {
         // Render stroke counts
         SDL_Color textColor = {255, 255, 255, 255};
         
-        // Player 1 strokes
+        // Player 1 strokes - bên trái
         char strokeText1[64];
-        sprintf(strokeText1, "Round: %d Strokes: %d Total: %d", 
-                gameScore.currentRound, player1Strokes, gameScore.totalStrokes1);
+        sprintf(strokeText1, "Strokes: %d   Total: %d", player1Strokes, gameScore.totalStrokes1);
         SDL_Surface* strokeSurface1 = TTF_RenderText_Solid(font, strokeText1, textColor);
         SDL_Texture* strokeTexture1 = SDL_CreateTextureFromSurface(renderer, strokeSurface1);
-        SDL_Rect strokeRect1 = {20, 20, strokeSurface1->w, strokeSurface1->h};
+        SDL_Rect strokeRect1 = {20, 15, strokeSurface1->w, strokeSurface1->h};  // Y từ 10 xuống 15
         SDL_RenderCopy(renderer, strokeTexture1, NULL, &strokeRect1);
-        SDL_FreeSurface(strokeSurface1);
-        SDL_DestroyTexture(strokeTexture1);
 
-        // Player 2 strokes
+        // Player 2 strokes - bên phải
         char strokeText2[64];
-        sprintf(strokeText2, "Round: %d Strokes: %d Total: %d", 
-                gameScore.currentRound, player2Strokes, gameScore.totalStrokes2);
+        sprintf(strokeText2, "Strokes: %d   Total: %d", player2Strokes, gameScore.totalStrokes2);
         SDL_Surface* strokeSurface2 = TTF_RenderText_Solid(font, strokeText2, textColor);
         SDL_Texture* strokeTexture2 = SDL_CreateTextureFromSurface(renderer, strokeSurface2);
         SDL_Rect strokeRect2 = {
-            SCREEN_WIDTH - strokeSurface2->w - 20, // 20 pixels margin from right edge
-            20,
+            SCREEN_WIDTH - strokeSurface2->w - 20,
+            15,  // Y từ 10 xuống 15
             strokeSurface2->w,
             strokeSurface2->h
         };
         SDL_RenderCopy(renderer, strokeTexture2, NULL, &strokeRect2);
-        SDL_FreeSurface(strokeSurface2);
-        SDL_DestroyTexture(strokeTexture2);
 
-        // Update score display
-        char scoreText1[64];
-        sprintf(scoreText1, "Player 1: %d (%d)", gameScore.player1Score, player1Strokes);
-        // ...existing score rendering code...
-
-        char scoreText2[64];
-        sprintf(scoreText2, "Player 2: %d (%d)", gameScore.player2Score, player2Strokes);
-        // ...existing score rendering code...
-
-        // Add round display
+        // Round display - ở giữa
         char roundText[32];
         sprintf(roundText, "Round: %d/%d", gameScore.currentRound, gameScore.maxRounds);
         SDL_Surface* roundSurface = TTF_RenderText_Solid(font, roundText, textColor);
         SDL_Texture* roundTexture = SDL_CreateTextureFromSurface(renderer, roundSurface);
-        SDL_Rect roundRect = {SCREEN_WIDTH/2 - roundSurface->w/2, 20, roundSurface->w, roundSurface->h};
+        SDL_Rect roundRect = {
+            SCREEN_WIDTH/2 - roundSurface->w/2, 
+            15,  // Y từ 10 xuống 15
+            roundSurface->w, 
+            roundSurface->h
+        };
+
         SDL_RenderCopy(renderer, roundTexture, NULL, &roundRect);
         SDL_FreeSurface(roundSurface);
         SDL_DestroyTexture(roundTexture);

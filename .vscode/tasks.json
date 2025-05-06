@@ -3,25 +3,25 @@
     "tasks": [
         {
             "type": "cppbuild",
-            "label": "C/C++: gcc.exe build active file",
-            "command": "C:/msys64/ucrt64/bin/gcc.exe",
+            "label": "C/C++: g++.exe build active file",
+            "command": "C:/msys64/ucrt64/bin/g++.exe",
             "args": [
                 "-fdiagnostics-color=always",
                 "-g",
-                "${file}",
+                "${workspaceFolder}/src/main copy.cpp",
                 "-o",
-                "${workspaceFolder}\\main_temp.exe", // Temporary output file name
-                "-Isrc/include", // SDL2 include path
-                "-Lsrc/lib",     // SDL2 library path
-                "-lSDL2",        // Link SDL2
-                "-lSDL2main",    // Link SDL2main
-                "-lSDL2_image",  // Link SDL2_image
-                "-lSDL2_mixer",  // Link SDL2_mixer
-                "-lSDL2_ttf",    // Link SDL2_ttf
-                "-lstdc++"       // Link the standard C++ library
+                "${workspaceFolder}/main.exe",
+                "-I${workspaceFolder}/src/include",
+                "-L${workspaceFolder}/src/lib",
+                "-lmingw32",
+                "-lSDL2main",
+                "-lSDL2",
+                "-lSDL2_image",
+                "-lSDL2_mixer",
+                "-lSDL2_ttf"
             ],
             "options": {
-                "cwd": "${workspaceFolder}" // Ensure the working directory is the project root
+                "cwd": "${workspaceFolder}"
             },
             "problemMatcher": [
                 "$gcc"
