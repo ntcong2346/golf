@@ -51,6 +51,10 @@ struct Obstacle {
     int x, y;
     int width, height;
     SDL_Rect rect;
+
+    // Constructor to initialize an Obstacle
+    Obstacle(int x = 0, int y = 0, int width = 0, int height = 0, SDL_Rect rect = {0, 0, 0, 0})
+        : x(x), y(y), width(width), height(height), rect(rect) {}
 };
 
 // Modify the GameScore struct
@@ -107,21 +111,29 @@ struct GameSettings {
 GameSettings settings;
 
 // Add this function before the main game loop
-void renderSettingsMenu(SDL_Renderer* renderer, TTF_Font* font, GameSettings& settings) {
+void renderSettingsMenu(SDL_Renderer* renderer, TTF_Font* font, GameSettings& settings, SDL_Texture* settingsBgTexture) {
+    // Render background first
+    SDL_RenderCopy(renderer, settingsBgTexture, NULL, NULL);
+    
     SDL_Color textColor = {255, 255, 255, 255};
     SDL_Color selectedColor = {255, 255, 0, 255};
     
     // Speed settings
     const char* speedTexts[] = {"Speed: Slow", "Speed: Normal", "Speed: Swift"};
-    SDL_Surface* speedSurface = TTF_RenderText_Solid(font, speedTexts[settings.speed], 
-        settings.speed == SLOW ? selectedColor : textColor);
-    SDL_Texture* speedTexture = SDL_CreateTextureFromSurface(renderer, speedSurface);
-    SDL_Rect speedRect = {
-        SCREEN_WIDTH/2 - speedSurface->w/2,
-        250,
-        speedSurface->w,
-        speedSurface->h
-    };
+    for(int i = 0; i < 3; i++) {
+        SDL_Surface* speedSurface = TTF_RenderText_Solid(font, speedTexts[i], 
+            settings.speed == i ? selectedColor : textColor);
+        SDL_Texture* speedTexture = SDL_CreateTextureFromSurface(renderer, speedSurface);
+        SDL_Rect speedRect = {
+            SCREEN_WIDTH/2 - speedSurface->w/2,
+            250 + i*50,
+            speedSurface->w,
+            speedSurface->h
+        };
+        SDL_RenderCopy(renderer, speedTexture, NULL, &speedRect);
+        SDL_FreeSurface(speedSurface);
+        SDL_DestroyTexture(speedTexture);
+    }
     
     // Sound settings
     const char* soundText = settings.soundEnabled ? "Sound: On" : "Sound: Off";
@@ -129,34 +141,26 @@ void renderSettingsMenu(SDL_Renderer* renderer, TTF_Font* font, GameSettings& se
     SDL_Texture* soundTexture = SDL_CreateTextureFromSurface(renderer, soundSurface);
     SDL_Rect soundRect = {
         SCREEN_WIDTH/2 - soundSurface->w/2,
-        300,
+        400,
         soundSurface->w,
         soundSurface->h
     };
+    SDL_RenderCopy(renderer, soundTexture, NULL, &soundRect);
     
     // Back button
     SDL_Surface* backSurface = TTF_RenderText_Solid(font, "Back", textColor);
     SDL_Texture* backTexture = SDL_CreateTextureFromSurface(renderer, backSurface);
     SDL_Rect backRect = {
         SCREEN_WIDTH/2 - backSurface->w/2,
-        350,
+        450,
         backSurface->w,
         backSurface->h
     };
-    
-    // Render settings menu
-    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-    SDL_RenderClear(renderer);
-    SDL_RenderCopy(renderer, speedTexture, NULL, &speedRect);
-    SDL_RenderCopy(renderer, soundTexture, NULL, &soundRect);
     SDL_RenderCopy(renderer, backTexture, NULL, &backRect);
-    SDL_RenderPresent(renderer);
     
     // Clean up
-    SDL_FreeSurface(speedSurface);
     SDL_FreeSurface(soundSurface);
     SDL_FreeSurface(backSurface);
-    SDL_DestroyTexture(speedTexture);
     SDL_DestroyTexture(soundTexture);
     SDL_DestroyTexture(backTexture);
 }
@@ -491,6 +495,15 @@ int main(int argc, char* argv[]) {
         return -1;
     }
 
+    // Add after other texture loading
+    SDL_Surface* settingsBgSurface = IMG_Load("C:/Users/Cong/golf/assets/graphics/menu_settings.png");
+    if (!settingsBgSurface) {
+        cout << "Cannot load settings background image! SDL_image Error: " << IMG_GetError() << endl;
+        return -1;
+    }
+    SDL_Texture* settingsBgTexture = SDL_CreateTextureFromSurface(renderer, settingsBgSurface);
+    SDL_FreeSurface(settingsBgSurface);
+
     // Add after other surface loading
     SDL_Surface* playBrightSurface = IMG_Load("C:/Users/Cong/golf/assets/graphics/playyy_bright.png");
     if (!playBrightSurface) {
@@ -633,7 +646,56 @@ int main(int argc, char* argv[]) {
                         mouseY >= playHitBox.y && mouseY <= playHitBox.y + playHitBox.h) {
                         gameState = PLAYING;
                     }
-                    // ... rest of the menu handling code ...
+                    // In the menu event handling section
+                    else if (mouseX >= menuHitBox.x && mouseX <= menuHitBox.x + menuHitBox.w &&
+                             mouseY >= menuHitBox.y && mouseY <= menuHitBox.y + menuHitBox.h) {
+                        // Show settings menu
+                        bool inSettings = true;
+                        while (inSettings && !quit) {
+                            while (SDL_PollEvent(&e) != 0) {
+                                if (e.type == SDL_QUIT) {
+                                    quit = true;
+                                    inSettings = false;
+                                }
+                                if (e.type == SDL_MOUSEBUTTONDOWN) {
+                                    int settingsMouseX = e.button.x;
+                                    int settingsMouseY = e.button.y;
+                                    
+                                    // Check speed button clicks
+                                    for(int i = 0; i < 3; i++) {
+                                        if (settingsMouseY >= 250 + i*50 && settingsMouseY <= 280 + i*50 &&
+                                            settingsMouseX >= SCREEN_WIDTH/2 - 50 && settingsMouseX <= SCREEN_WIDTH/2 + 50) {
+                                            settings.speed = (BallSpeed)i;
+                                            break;
+                                        }
+                                    }
+                                    
+                                    // Check sound button click
+                                    if (settingsMouseY >= 400 && settingsMouseY <= 430 &&
+                                        settingsMouseX >= SCREEN_WIDTH/2 - 50 && settingsMouseX <= SCREEN_WIDTH/2 + 50) {
+                                        settings.soundEnabled = !settings.soundEnabled;
+                                        if (!settings.soundEnabled) {
+                                            Mix_Volume(-1, 0); // Mute all channels
+                                        } else {
+                                            Mix_Volume(-1, MIX_MAX_VOLUME); // Restore volume
+                                        }
+                                    }
+                                    
+                                    // Check back button click
+                                    if (settingsMouseY >= 450 && settingsMouseY <= 480 &&
+                                        settingsMouseX >= SCREEN_WIDTH/2 - 50 && settingsMouseX <= SCREEN_WIDTH/2 + 50) {
+                                        inSettings = false;
+                                    }
+                                }
+                            }
+                            
+                            // Render settings menu
+                            SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+                            SDL_RenderClear(renderer);
+                            renderSettingsMenu(renderer, font, settings, settingsBgTexture);
+                            SDL_RenderPresent(renderer);
+                        }
+                    }
                 }
 
                 SDL_RenderPresent(renderer);
@@ -747,7 +809,7 @@ int main(int argc, char* argv[]) {
                                 }
                             }
                         }
-                        renderSettingsMenu(renderer, font, settings);
+                        renderSettingsMenu(renderer, font, settings, settingsBgTexture);
                     }
                 }
                 else if (mouseX >= exitHitBox.x && mouseX <= exitHitBox.x + exitHitBox.w &&
@@ -1152,11 +1214,10 @@ int main(int argc, char* argv[]) {
                                     int baseSize = 100 + (gameScore.currentRound * 20);  // Size increases with rounds
                                     
                                     // Set dimensions based on orientation
-                                    int obsWidth = isHorizontal ? baseSize : 30;
-                                    int obsHeight = isHorizontal ? 30 : baseSize;
-                                    
                                     // Generate random position that works for both sides
+                                    int obsWidth = 30; // Initialize obsWidth with a default value
                                     int obsX = rand() % (SCREEN_WIDTH/4 - obsWidth) + SCREEN_WIDTH/8;  // Center in left quarter
+                                    int obsHeight = 100; // Define a default height for obstacles
                                     int obsY = rand() % (SCREEN_HEIGHT - obsHeight - 100) + 50;
                                     
                                     // Set identical obstacles on both sides
@@ -1383,6 +1444,7 @@ int main(int argc, char* argv[]) {
     SDL_DestroyTexture(playBrightTexture);
     SDL_DestroyTexture(menuBrightTexture);
     SDL_DestroyTexture(exitBrightTexture);
+    SDL_DestroyTexture(settingsBgTexture);
 
     // Giải phóng âm thanh trước khi thoát
     Mix_FreeChunk(swingSound);
