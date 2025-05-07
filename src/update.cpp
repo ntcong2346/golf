@@ -1,6 +1,6 @@
 #include "game.h"
 
-void updateGame(Mix_Chunk* bounceSound, Mix_Chunk* holeSound) {
+void updateGame(SDL_Renderer* renderer, TTF_Font* font, SDL_Texture* gameOverTexture, Mix_Chunk* bounceSound, Mix_Chunk* holeSound) {
     // Update ball positions
     updateBall(&ball1, bounceSound, holeSound);
     updateBall(&ball2, bounceSound, holeSound);
@@ -52,6 +52,11 @@ void updateGame(Mix_Chunk* bounceSound, Mix_Chunk* holeSound) {
             Reward::SIZE,
             Reward::SIZE
         };
+    }
+
+    // Ensure the game over screen is displayed immediately after the game ends
+    if (gameScore.isGameOver) {
+        checkGameOver(renderer, font, gameOverTexture);
     }
 }
 
@@ -299,41 +304,21 @@ void setupNextRound() {
     ball1.y = SCREEN_HEIGHT - 50;
     ball2.x = 3 * SCREEN_WIDTH / 4;
     ball2.y = SCREEN_HEIGHT - 50;
-    
+
     // Reset strokes for new round
     player1Strokes = 0;
     player2Strokes = 0;
-    
+
     // Update obstacles for new round
     leftObstacles = roundObstacles.roundConfigs[gameScore.currentRound - 1];
-    
-    // Mirror obstacles for right side
-    rightObstacles.count = leftObstacles.count;
-    for(int i = 0; i < leftObstacles.count; i++) {
-        // Đảm bảo chướng ngại vật không vượt qua vạch giữa màn hình
-        // Kiểm tra và điều chỉnh vị trí của chướng ngại vật bên trái
-        if (leftObstacles.obstacles[i].x + leftObstacles.obstacles[i].width > SCREEN_WIDTH/2) {
-            leftObstacles.obstacles[i].width = SCREEN_WIDTH/2 - leftObstacles.obstacles[i].x;
-            leftObstacles.obstacles[i].rect.w = leftObstacles.obstacles[i].width;
-        }
-        
-        // Tạo chướng ngại vật bên phải bằng cách phản chiếu từ bên trái
-        rightObstacles.obstacles[i] = leftObstacles.obstacles[i];
-        
-        // Đặt vị trí cho chướng ngại vật bên phải
+
+    // Align obstacles for player 2 with player 1
+    rightObstacles = leftObstacles;
+    for (int i = 0; i < rightObstacles.count; i++) {
         rightObstacles.obstacles[i].x = SCREEN_WIDTH - leftObstacles.obstacles[i].x - leftObstacles.obstacles[i].width;
-        
-        // Đảm bảo chướng ngại vật bên phải không vượt qua vạch giữa
-        if (rightObstacles.obstacles[i].x < SCREEN_WIDTH/2) {
-            int adjustment = SCREEN_WIDTH/2 - rightObstacles.obstacles[i].x;
-            rightObstacles.obstacles[i].x += adjustment;
-            rightObstacles.obstacles[i].width -= adjustment;
-        }
-        
         rightObstacles.obstacles[i].rect.x = rightObstacles.obstacles[i].x;
-        rightObstacles.obstacles[i].rect.w = rightObstacles.obstacles[i].width;
     }
-    
+
     // Reset and activate rewards for new round
     resetRewards();
 }

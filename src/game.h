@@ -174,7 +174,7 @@ void handleGameOverEvents(SDL_Event& e, SDL_Renderer* renderer, TTF_Font* font,
                          SDL_Texture* gameOverTexture, bool& quit);
 
 // Update functions
-void updateGame(Mix_Chunk* bounceSound = nullptr, Mix_Chunk* holeSound = nullptr);
+void updateGame(SDL_Renderer* renderer, TTF_Font* font, SDL_Texture* gameOverTexture, Mix_Chunk* bounceSound = nullptr, Mix_Chunk* holeSound = nullptr);
 void updateBall(Ball* ball, Mix_Chunk* bounceSound, Mix_Chunk* holeSound);
 void updatePower(float& powerIncrement);
 void updateObstacles();
