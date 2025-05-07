@@ -33,6 +33,9 @@ struct Ball {
     float targetY = 0;
     static constexpr float MOVE_SPEED = 2.0f;
 
+    // Default constructor
+    Ball() : x(0), y(0), speedX(0), speedY(0), isActive(false), rect({0, 0, 0, 0}) {}
+
     Ball(int x, int y, float speedX, float speedY, bool isActive, SDL_Rect rect)
         : x(x), y(y), speedX(speedX), speedY(speedY), isActive(isActive), rect(rect) {}
 };

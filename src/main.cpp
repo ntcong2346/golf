@@ -94,25 +94,11 @@ int main(int argc, char* argv[]) {
                     handleGameEvents(e, swingSound, bounceSound, powerIncrement);
                     break;
                 case GAME_OVER:
-                    // Game over events
-                    if (e.type == SDL_KEYDOWN && e.key.keysym.sym == SDLK_SPACE) {
-                        gameState = MENU;
-                        // Reset game state
-                        gameScore.currentRound = 1;
-                        gameScore.player1Score = 0;
-                        gameScore.player2Score = 0;
-                        gameScore.totalStrokes1 = 0;
-                        gameScore.totalStrokes2 = 0;
-                        gameScore.isGameOver = false;
-                        player1Strokes = 0;
-                        player2Strokes = 0;
-                        
-                        // Reset ball positions
-                        ball1.x = SCREEN_WIDTH / 4;
-                        ball1.y = SCREEN_HEIGHT - 50;
-                        ball2.x = 3 * SCREEN_WIDTH / 4;
-                        ball2.y = SCREEN_HEIGHT - 50;
-                    }
+                    // Ensure the game over state is properly handled
+                    renderGameOver(renderer, font, gameOverTexture);
+                    SDL_RenderPresent(renderer);
+                    SDL_Delay(2000); // Pause for 2 seconds to display the game over screen
+                    gameState = MENU; // Return to menu after displaying game over
                     break;
                 default:
                     break;
