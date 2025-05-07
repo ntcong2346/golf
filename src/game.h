@@ -32,6 +32,9 @@ struct Ball {
     float targetX = 0;
     float targetY = 0;
     static constexpr float MOVE_SPEED = 2.0f;
+
+    Ball(int x, int y, float speedX, float speedY, bool isActive, SDL_Rect rect)
+        : x(x), y(y), speedX(speedX), speedY(speedY), isActive(isActive), rect(rect) {}
 };
 
 // Hole struct
