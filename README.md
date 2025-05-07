@@ -74,7 +74,10 @@ Phím	Chức năng
 ESC	Thoát game
 Space	Quay lại menu
 Mouse	Kéo/thả để đánh bóng
+
 Cấu trúc thư mục
+
+
 golf/
 ├── assets/
 │   ├── audio/        # File âm thanh
