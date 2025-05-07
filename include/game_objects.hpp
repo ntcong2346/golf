@@ -1,7 +1,13 @@
-// entities.h
-#pragma once
+#ifndef GAME_OBJECTS_HPP
+#define GAME_OBJECTS_HPP
 
 #include <SDL2/SDL.h>
+#include "../include/game_state.hpp" // Adjusted path to locate the header file
+
+const int SCREEN_WIDTH = 800;
+const int SCREEN_HEIGHT = 600;
+const int ballRadius = 15;
+const int HOLE_RADIUS = 20;
 
 struct Ball {
     int x, y;
@@ -58,11 +64,18 @@ struct ObstacleSet {
 
 struct RoundObstacles {
     static const int MAX_ROUNDS = 5;
-    ObstacleSet roundConfigs[MAX_ROUNDS] = {
-        {{{0}}, 2},  // Round 1
-        {{{0}}, 3},  // Round 2
-        {{{0}}, 3},  // Round 3
-        {{{0}}, 4},  // Round 4
-        {{{0}}, 5}   // Round 5
-    };
+    ObstacleSet roundConfigs[MAX_ROUNDS];
 };
+
+extern RoundObstacles roundObstacles;
+extern ObstacleSet leftObstacles;
+extern ObstacleSet rightObstacles;
+extern GameScore gameScore;
+
+void initializeRoundObstacles();
+void resetRewards(Reward& reward1, Reward& reward2);
+void updateBalls(Ball& ball1, Ball& ball2, Reward& reward1, Reward& reward2, Hole& hole1, Hole& hole2, int& currentBall, int& player1Strokes, int& player2Strokes, GameState& gameState);
+void updateHoles(Hole& hole1, Hole& hole2);
+void updateObstacles(ObstacleSet& leftObstacles, ObstacleSet& rightObstacles);
+
+#endif
